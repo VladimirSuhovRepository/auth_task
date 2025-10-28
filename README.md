@@ -1,7 +1,10 @@
 # auth_task — README
 
 ## High-level summary
-Primary goals: make the project easier to run, verify, and maintain (docs, tests, CI), harden basic security, and add lightweight developer ergonomics (linting, pre-commit, Docker). Each item includes a short description, concrete steps, and an estimated time budget. The times sum to 240 minutes (4 hours).
+Primary goals: make the project easier to run, verify, and maintain (docs, tests, CI), 
+harden basic security, and add lightweight developer ergonomics (linting, pre-commit, Docker). 
+Each item includes a short description, concrete steps, and an estimated time budget. 
+The times sum to 240 minutes (4 hours).
 
 ## If I had more than 4 hours (next priorities)
 - Add integration tests and end-to-end scenarios (auth flows, DB migrations).
