@@ -1,0 +1,62 @@
+<div class="notification-container" *ngIf="notifications.length > 0">
+  <!-- Clear All Button -->
+  <div class="notification-header" *ngIf="notifications.length > 1">
+    <button
+      (click)="onClearAll()"
+      class="clear-all-btn"
+      title="Clear all notifications"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="3,6 5,6 21,6"/>
+        <path d="M19,6V20a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6M8,6V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
+        <line x1="10" y1="11" x2="10" y2="17"/>
+        <line x1="14" y1="11" x2="14" y2="17"/>
+      </svg>
+      Clear All
+    </button>
+  </div>
+
+  <!-- Notifications List -->
+  <div class="notifications-list">
+    <div
+      *ngFor="let notification of notifications; trackBy: trackByNotificationId"
+      class="notification-item"
+      [ngClass]="'notification-' + notification.type"
+    >
+      <!-- Notification Icon -->
+      <div class="notification-icon" [innerHTML]="getNotificationIcon(notification.type)">
+      </div>
+
+      <!-- Notification Content -->
+      <div class="notification-content">
+        <div class="notification-title">{{ notification.title }}</div>
+        <div class="notification-message">{{ notification.message }}</div>
+        <div class="notification-timestamp">{{ getTimeAgo(notification.timestamp) }}</div>
+      </div>
+
+      <!-- Close Button -->
+      <button
+        (click)="onClose(notification.id)"
+        class="notification-close"
+        title="Dismiss notification"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+
+      <!-- Progress Bar (for timed notifications) -->
+      <div
+        class="notification-progress"
+        *ngIf="notification.duration && notification.duration > 0"
+        [style.animation-duration]="notification.duration + 'ms'"
+      ></div>
+    </div>
+  </div>
+</div>
+
+<!-- Empty State -->
+<div class="notification-empty" *ngIf="notifications.length === 0">
+  <!-- This can be hidden or used for debugging -->
+</div>

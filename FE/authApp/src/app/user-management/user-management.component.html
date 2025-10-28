@@ -1,0 +1,322 @@
+<div class="user-management-container">
+<div class="header">
+    <div class="title-and-search">
+        <h2>User Management</h2>
+        <div class="header-actions">
+            <button (click)="openCreateUserModal()" class="btn btn-primary create-user-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                Create New User
+            </button>
+        </div>
+    </div>
+    <div class="user-info">
+        <span class="logged-in-email">Welcome {{ loggedInUser?.email }}</span>
+    </div>
+</div>
+
+  <div class="content" *ngIf="!loading; else loadingTemplate">
+    <div class="users-table-container">
+      <table class="users-table" *ngIf="users.length > 0; else noUsersTemplate">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Email</th>
+            <th>Password</th>
+            <th>Roles</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let user of users" [class.selected]="selectedUser?.id === user.id">
+            <td>{{ user.id }}</td>
+            <td>{{ user.email }}</td>
+            <td>{{ user.password }}</td>
+            <td>
+              <span class="roles">
+                <span *ngFor="let role of user.roles" class="role-badge">{{ role }}</span>
+              </span>
+            </td>
+            <td>
+              <span class="status-badge" [class.active]="user.isActive" [class.inactive]="!user.isActive">
+                {{ user.isActive ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td class="actions">
+              <button (click)="selectUser(user)" class="btn btn-info">View</button>
+              <button (click)="openEditUserModal(user)" class="btn btn-warning">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                Edit
+              </button>
+              <button (click)="deleteUser(user.id)" class="btn btn-danger">Delete</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <ng-template #noUsersTemplate>
+        <div class="no-users">
+          <p>No users found.</p>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- User Details Panel -->
+    <div class="user-details" *ngIf="selectedUser">
+      <h3>User Details</h3>
+      <div class="details-content">
+        <div class="detail-item">
+          <label>ID:</label>
+          <span>{{ selectedUser.id }}</span>
+        </div>
+        <div class="detail-item">
+          <label>Username:</label>
+          <span>{{ selectedUser.username }}</span>
+        </div>
+        <div class="detail-item">
+          <label>Email:</label>
+          <span>{{ selectedUser.email }}</span>
+        </div>
+        <div class="detail-item">
+          <label>First Name:</label>
+          <span>{{ selectedUser.firstName || 'Not provided' }}</span>
+        </div>
+        <div class="detail-item">
+          <label>Last Name:</label>
+          <span>{{ selectedUser.lastName || 'Not provided' }}</span>
+        </div>
+        <div class="detail-item">
+          <label>Status:</label>
+          <span [class.active]="selectedUser.isActive" [class.inactive]="!selectedUser.isActive">
+            {{ selectedUser.isActive ? 'Active' : 'Inactive' }}
+          </span>
+        </div>
+        <div class="detail-item">
+          <label>Roles:</label>
+          <div class="roles">
+            <span *ngFor="let role of selectedUser.roles" class="role-badge">{{ role }}</span>
+          </div>
+        </div>
+        <div class="detail-item" *ngIf="selectedUser.createdAt">
+          <label>Created:</label>
+          <span>{{ selectedUser.createdAt | date }}</span>
+        </div>
+        <div class="detail-item" *ngIf="selectedUser.lastLogin">
+          <label>Last Login:</label>
+          <span>{{ selectedUser.lastLogin | date }}</span>
+        </div>
+      </div>
+      <button (click)="selectedUser = null" class="btn btn-secondary">Close</button>
+    </div>
+  </div>
+
+  <ng-template #loadingTemplate>
+    <div class="loading">
+      <p>Loading users...</p>
+    </div>
+  </ng-template>
+
+  <!-- Create User Modal -->
+  <div class="modal-overlay" *ngIf="showCreateUserModal" (click)="closeCreateUserModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Create New User</h3>
+        <button (click)="closeCreateUserModal()" class="modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <form [formGroup]="createUserForm" (ngSubmit)="onCreateUser()" class="create-user-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="email">Email Address *</label>
+            <input
+              id="email"
+              type="email"
+              formControlName="email"
+              placeholder="Enter email address"
+              class="form-input"
+              [class.error]="isEmailInvalid"
+            >
+            <div class="error-message" *ngIf="isEmailInvalid">
+              <span *ngIf="email?.errors?.['required']">Email is required</span>
+              <span *ngIf="email?.errors?.['email']">Please enter a valid email</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="password">Password *</label>
+            <input
+              id="password"
+              type="password"
+              formControlName="password"
+              placeholder="Enter password (min 6 characters)"
+              class="form-input"
+              [class.error]="isPasswordInvalid"
+            >
+            <div class="error-message" *ngIf="isPasswordInvalid">
+              <span *ngIf="password?.errors?.['required']">Password is required</span>
+              <span *ngIf="password?.errors?.['minlength']">Password must be at least 6 characters</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="roles">Role</label>
+            <select id="roles" formControlName="roles" class="form-select">
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" (click)="closeCreateUserModal()" class="btn btn-secondary">
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="createUserForm.invalid || isCreatingUser"
+            [class.loading]="isCreatingUser"
+          >
+            <span *ngIf="!isCreatingUser">Create User</span>
+            <span *ngIf="isCreatingUser" class="loading-content">
+              <svg class="spinner" width="16" height="16" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                <path d="M22 12A10 10 0 0 0 12 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              Creating...
+            </span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit User Modal -->
+  <div class="modal-overlay" *ngIf="showEditUserModal" (click)="closeEditUserModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Edit User</h3>
+        <button (click)="closeEditUserModal()" class="modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <form [formGroup]="editUserForm" (ngSubmit)="onUpdateUser()" class="edit-user-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editEmail">Email Address *</label>
+            <input
+              id="editEmail"
+              type="email"
+              formControlName="email"
+              placeholder="Enter email address"
+              class="form-input"
+              [class.error]="isEditEmailInvalid"
+            >
+            <div class="error-message" *ngIf="isEditEmailInvalid">
+              <span *ngIf="editEmail?.errors?.['required']">Email is required</span>
+              <span *ngIf="editEmail?.errors?.['email']">Please enter a valid email</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editPassword">New Password</label>
+            <div class="password-input-wrapper">
+              <input
+                id="editPassword"
+                [type]="showEditPassword ? 'text' : 'password'"
+                formControlName="password"
+                placeholder="Leave blank to keep current password"
+                class="form-input"
+                [class.error]="isEditPasswordInvalid"
+              >
+              <button
+                type="button"
+                class="password-toggle"
+                (click)="toggleEditPasswordVisibility()"
+                tabindex="-1"
+              >
+                <svg *ngIf="!showEditPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <svg *ngIf="showEditPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                  <line x1="1" y1="1" x2="23" y2="23"/>
+                </svg>
+              </button>
+            </div>
+            <div class="error-message" *ngIf="isEditPasswordInvalid">
+              <span *ngIf="editPassword?.errors?.['minlength']">Password must be at least 6 characters</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editRoles">Role</label>
+            <select id="editRoles" formControlName="roles" class="form-select">
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="checkbox-wrapper">
+              <input
+                type="checkbox"
+                formControlName="isActive"
+                class="checkbox-input"
+              >
+              <span class="checkbox-custom"></span>
+              <span class="checkbox-label">Active User</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" (click)="closeEditUserModal()" class="btn btn-secondary">
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="editUserForm.invalid || isUpdatingUser"
+            [class.loading]="isUpdatingUser"
+          >
+            <span *ngIf="!isUpdatingUser">Update User</span>
+            <span *ngIf="isUpdatingUser" class="loading-content">
+              <svg class="spinner" width="16" height="16" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                <path d="M22 12A10 10 0 0 0 12 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              Updating...
+            </span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

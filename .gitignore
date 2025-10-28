@@ -26,3 +26,79 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Visual Studio / .NET
+.vs/
+.vscode/
+.idea/
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.DotSettings.user
+
+# Build results
+**/bin/
+**/obj/
+out/
+artifacts/
+
+# Publish & installers
+*.Publish.xml
+*.pubxml
+*.pubxml.user
+PublishProfiles/
+*.appx
+*.appxbundle
+*.msix
+*.msixbundle
+
+# NuGet
+packages/
+*.nupkg
+project.lock.json
+.nuget/
+
+# VS test results
+[Tt]est[Rr]esults/
+TestResults/
+*.trx
+
+# Coverage & profiling
+*.coverage
+*.coveragexml
+*.prof
+*.vsp
+*.vspx
+*.coveragereport
+
+# Database files
+*.mdf
+*.ldf
+*.ndf
+*.dbmdl
+
+# Logs, temp files
+*.log
+*.tmp
+*.cache
+*.bak
+
+# Security / secrets
+secrets.json
+appsettings.*.Secrets.json
+
+# Rider / ReSharper
+_ReSharper*/
+*._ReSharper*/
+*.DotSettings
+*.DotSettings.user
+
+# Misc
+*.vsix
+*.publishsettings
+*.userprefs
+Thumbs.db
+Desktop.ini
