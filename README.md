@@ -18,6 +18,6 @@ Primary goals: make the project easier to run, verify, and maintain (docs, tests
 - Docker images should be multi-stage and small to reduce build and deploy time.
 
 ## Concrete next actions you can ask me to perform now
-- Draft a `README.md` with project-specific content (I can generate a template).
-- Create unit tests for a specific module (point me at the active source file).
+- Draft a `README.md` with project-specific content.
+- Create unit tests for a specific module.
 - Scaffold a GitHub Actions workflow, Dockerfile, or pre-commit configuration.
