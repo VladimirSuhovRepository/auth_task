@@ -21,5 +21,3 @@ Primary goals: make the project easier to run, verify, and maintain (docs, tests
 - Draft a `README.md` with project-specific content (I can generate a template).
 - Create unit tests for a specific module (point me at the active source file).
 - Scaffold a GitHub Actions workflow, Dockerfile, or pre-commit configuration.
-
-If you tell me which language/framework and the key source files, I’ll produce concrete files and commands within the 4-hour plan.
