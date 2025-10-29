@@ -9,5 +9,5 @@
 6. Implement multi-factor authentication (MFA).
 7. Add password reset functionality.
 8. Implement user permissions.
-9. Add logging and monitoring.
-10. Refactor code for better modularity and maintainability. 
+9. Implement N-Layer Architecture or DDD approach.
+10. Refactor code for better modularity and maintainability.
