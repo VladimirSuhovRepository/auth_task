@@ -102,7 +102,7 @@ namespace AuthApp.Services
             {
                 var roleEntities = await _db.Set<Role>()
                                             .AsNoTracking()
-                                            .Where(r => roles.Contains(r.Name.ToLower()))
+                                            .Where(r => roles.Contains(r.Name))
                                             .ToListAsync(ct)
                                             .ConfigureAwait(false);
                 foreach (var role in roleEntities)
@@ -141,80 +141,21 @@ namespace AuthApp.Services
             List<string> requestedNormalized = new();
             if (syncRoles)
             {
-                requestedNormalized = userDto.Roles?
-                                          .Where(r => !string.IsNullOrWhiteSpace(r))
-                                          .Select(r => r!.Trim())
-                                          .Where(r => r.Length > 0)
-                                          .Distinct(StringComparer.OrdinalIgnoreCase)
-                                          .ToList() ?? new List<string>();
+                requestedNormalized = NormalizeRequestedRoles(userDto.Roles);
             }
 
+            // Delegate update + role synchronization to extracted method
+            return await UpdateEntityAndSyncRolesAsync(entity, userDto, syncRoles, requestedNormalized, ct).ConfigureAwait(false);
+        }
+
+        private async Task<bool> UpdateEntityAndSyncRolesAsync(User entity, UserDto userDto, bool syncRoles, List<string> requestedNormalized, CancellationToken ct)
+        {
             try
             {
-                // If roles should be updated, compute diffs and apply changes
+                // If roles should be updated, delegate synchronization to extracted method
                 if (syncRoles)
                 {
-                    // Load existing user roles with their role names
-                    var existing = await (from ur in _db.Set<UserRole>().AsTracking()
-                                          join r in _db.Set<Role>().AsNoTracking() on ur.RoleId equals r.Id
-                                          where ur.UserId == entity.Id
-                                          select new { UserRole = ur, RoleName = r.Name })
-                                         .ToListAsync(ct)
-                                         .ConfigureAwait(false);
-
-                    var existingNames = existing
-                                        .Where(x => !string.IsNullOrWhiteSpace(x.RoleName))
-                                        .Select(x => x.RoleName!.Trim())
-                                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-                    var requestedSet = requestedNormalized
-                                       .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-                    // Determine names to add and remove
-                    var toAdd = requestedSet.Except(existingNames, StringComparer.OrdinalIgnoreCase).ToList();
-                    var toRemove = existingNames.Except(requestedSet, StringComparer.OrdinalIgnoreCase).ToList();
-
-                    // Load role entities for any names we might add (lookup by normalized lower-case)
-                    if (toAdd.Count > 0)
-                    {
-                        var toAddLower = toAdd.Select(n => n.ToLowerInvariant()).ToList();
-                        var roleEntities = await _db.Set<Role>()
-                                                    .AsNoTracking()
-                                                    .Where(r => toAddLower.Contains(r.Name.ToLower()))
-                                                    .ToListAsync(ct)
-                                                    .ConfigureAwait(false);
-
-                        // Add UserRole entries for found roles
-                        foreach (var role in roleEntities)
-                        {
-                            // Ensure we haven't already got this assignment (defensive)
-                            if (!existingNames.Contains(role.Name, StringComparer.OrdinalIgnoreCase))
-                            {
-                                _db.Set<UserRole>().Add(new UserRole
-                                {
-                                    UserId = entity.Id,
-                                    RoleId = role.Id
-                                });
-                            }
-                        }
-                    }
-
-                    // Remove UserRole entries for toRemove names
-                    if (toRemove.Count > 0)
-                    {
-                        var toRemoveLower = toRemove.Select(n => n.ToLowerInvariant()).ToList();
-
-                        var removals = existing
-                                       .Where(x => x.RoleName != null && toRemoveLower.Contains(x.RoleName!.Trim().ToLowerInvariant()))
-                                       .Select(x => x.UserRole)
-                                       .ToList();
-
-                        if (removals.Count > 0)
-                        {
-                            _db.Set<UserRole>().RemoveRange(removals);
-                        }
-                    }
+                    await SyncRolesAsync(entity.Id, requestedNormalized, ct).ConfigureAwait(false);
                 }
 
                 // Update user entity and save all changes (user + role changes) in one transaction
@@ -237,6 +178,34 @@ namespace AuthApp.Services
             {
                 _logger?.LogWarning(ex, "Concurrency conflict updating user {UserId}", userDto.Id);
                 return false;
+            }
+        }
+
+        // Extracted helper to compute role diff and apply additions/removals
+        private async Task SyncRolesAsync(int userId, List<string> requestedNormalized, CancellationToken ct)
+        {
+            // Load existing user-role pairs (tracked) along with role names
+            var existing = await LoadExistingUserRolesAsync(userId, ct).ConfigureAwait(false);
+
+            // Build set of existing role names
+            var existingNames = GetExistingRoleNames(existing);
+
+            // Build requested set (case-insensitive)
+            var requestedSet = requestedNormalized
+                               .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            // Determine names to add and remove
+            var toAdd = requestedSet.Except(existingNames, StringComparer.OrdinalIgnoreCase).ToList();
+            var toRemove = existingNames.Except(requestedSet, StringComparer.OrdinalIgnoreCase).ToList();
+
+            if (toAdd.Count > 0)
+            {
+                await AddRolesAsync(userId, existingNames, toAdd, ct).ConfigureAwait(false);
+            }
+
+            if (toRemove.Count > 0)
+            {
+                RemoveRoles(existing, toRemove);
             }
         }
 
@@ -364,6 +333,76 @@ namespace AuthApp.Services
             catch
             {
                 return false;
+            }
+        }
+
+        private static List<string> NormalizeRequestedRoles(IEnumerable<string>? roles)
+        {
+            if (roles == null) return new List<string>();
+            return roles
+                   .Where(r => !string.IsNullOrWhiteSpace(r))
+                   .Select(r => r!.Trim())
+                   .Where(r => r.Length > 0)
+                   .Distinct(StringComparer.OrdinalIgnoreCase)
+                   .ToList();
+        }
+
+        private async Task<List<(UserRole UserRole, string? RoleName)>> LoadExistingUserRolesAsync(int userId, CancellationToken ct)
+        {
+            var query = await (from ur in _db.Set<UserRole>().AsTracking()
+                               join r in _db.Set<Role>().AsNoTracking() on ur.RoleId equals r.Id
+                               where ur.UserId == userId
+                               select new { UserRole = ur, RoleName = r.Name })
+                              .ToListAsync(ct)
+                              .ConfigureAwait(false);
+
+            return query.Select(x => (x.UserRole, x.RoleName)).ToList();
+        }
+
+        private static HashSet<string> GetExistingRoleNames(IEnumerable<(UserRole UserRole, string? RoleName)> existing)
+        {
+            return existing
+                   .Where(x => !string.IsNullOrWhiteSpace(x.RoleName))
+                   .Select(x => x.RoleName!.Trim())
+                   .Distinct(StringComparer.OrdinalIgnoreCase)
+                   .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
+        private async Task AddRolesAsync(int userId, HashSet<string> existingNames, List<string> toAdd, CancellationToken ct)
+        {
+            var toAddLower = toAdd.Select(n => n.ToLowerInvariant()).ToList();
+            var roleEntities = await _db.Set<Role>()
+                                        .AsNoTracking()
+                                        .Where(r => toAddLower.Contains(r.Name.ToLower()))
+                                        .ToListAsync(ct)
+                                        .ConfigureAwait(false);
+
+            foreach (var role in roleEntities)
+            {
+                // Ensure we haven't already got this assignment (defensive)
+                if (!existingNames.Contains(role.Name, StringComparer.OrdinalIgnoreCase))
+                {
+                    _db.Set<UserRole>().Add(new UserRole
+                    {
+                        UserId = userId,
+                        RoleId = role.Id
+                    });
+                }
+            }
+        }
+
+        private void RemoveRoles(IEnumerable<(UserRole UserRole, string? RoleName)> existing, List<string> toRemove)
+        {
+            var toRemoveLower = toRemove.Select(n => n.ToLowerInvariant()).ToList();
+
+            var removals = existing
+                           .Where(x => x.RoleName != null && toRemoveLower.Contains(x.RoleName!.Trim().ToLowerInvariant()))
+                           .Select(x => x.UserRole)
+                           .ToList();
+
+            if (removals.Count > 0)
+            {
+                _db.Set<UserRole>().RemoveRange(removals);
             }
         }
     }

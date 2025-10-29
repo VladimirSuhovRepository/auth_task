@@ -176,11 +176,20 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label for="roles">Role</label>
-            <select id="roles" formControlName="roles" class="form-select">
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
+            <label for="roles">Role *</label>
+            <select
+              id="roles"
+              formControlName="roles"
+              class="form-select"
+              [class.error]="isRolesInvalid"
+            >
+              <option value="">Select a role</option>
+              <option value="User">User</option>
+              <option value="Admin">Admin</option>
             </select>
+            <div class="error-message" *ngIf="isRolesInvalid">
+              <span *ngIf="roles?.errors?.['required']">Role selection is required</span>
+            </div>
           </div>
         </div>
 
@@ -242,13 +251,13 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label for="editPassword">New Password</label>
+            <label for="editPassword">New Password *</label>
             <div class="password-input-wrapper">
               <input
                 id="editPassword"
                 [type]="showEditPassword ? 'text' : 'password'"
                 formControlName="password"
-                placeholder="Leave blank to keep current password"
+                placeholder="New Password (required)"
                 class="form-input"
                 [class.error]="isEditPasswordInvalid"
               >
@@ -269,6 +278,7 @@
               </button>
             </div>
             <div class="error-message" *ngIf="isEditPasswordInvalid">
+              <span *ngIf="editPassword?.errors?.['required']">Password is required</span>
               <span *ngIf="editPassword?.errors?.['minlength']">Password must be at least 6 characters</span>
             </div>
           </div>
@@ -276,11 +286,20 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label for="editRoles">Role</label>
-            <select id="editRoles" formControlName="roles" class="form-select">
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
+            <label for="editRoles">Role *</label>
+            <select
+              id="editRoles"
+              formControlName="roles"
+              class="form-select"
+              [class.error]="isEditRolesInvalid"
+            >
+              <option value="">Select a role</option>
+              <option value="User">User</option>
+              <option value="Admin">Admin</option>
             </select>
+            <div class="error-message" *ngIf="isEditRolesInvalid">
+              <span *ngIf="editRoles?.errors?.['required']">Role selection is required</span>
+            </div>
           </div>
 
           <div class="form-group">

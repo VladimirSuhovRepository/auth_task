@@ -49,17 +49,17 @@ export class UserManagementComponent implements OnInit {
     this.createUserForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]],
-      roles: ['user'] // Default role
+      roles: ['', [Validators.required]] // Required role selection
     });
   }
 
   private initializeEditUserForm(): void {
     this.editUserForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.minLength(6)]], // Optional password field
+      password: ['', [Validators.required, Validators.minLength(6)]],
       firstName: [''],
       lastName: [''],
-      roles: ['user'],
+      roles: ['', [Validators.required]], // Required role selection
       isActive: [true]
     });
   }
@@ -106,9 +106,7 @@ export class UserManagementComponent implements OnInit {
   openCreateUserModal(): void {
     this.showCreateUserModal = true;
     this.createUserForm.reset();
-    this.createUserForm.patchValue({
-      roles: 'user' // Reset to default role
-    });
+    // No default role - user must select one
   }
 
   closeCreateUserModal(): void {
@@ -170,10 +168,11 @@ export class UserManagementComponent implements OnInit {
     this.userToEdit = user;
     this.showEditUserModal = true;
 
-    // Populate form with current user data
+    // Populate form with current user data, password field left empty (required)
     this.editUserForm.patchValue({
       id: user.id,
       email: user.email,
+      password: '', // Leave empty to require new password
       firstName: user.firstName || '',
       lastName: user.lastName || '',
       roles: user.roles?.[0] || 'user',
@@ -199,16 +198,12 @@ export class UserManagementComponent implements OnInit {
     const updateData: any = {
       id: this.userToEdit.id,
       email: formValue.email.trim(),
+      password: formValue.password.trim(), // Password is now required
       firstName: formValue.firstName?.trim(),
       lastName: formValue.lastName?.trim(),
       roles: [formValue.roles],
       isActive: formValue.isActive
     };
-
-    // Only include password if it's provided
-    if (formValue.password && formValue.password.trim()) {
-      updateData.password = formValue.password.trim();
-    }
 
     this.userService.updateUser(this.userToEdit.id, updateData).subscribe({
       next: (updatedUser) => {
@@ -241,6 +236,7 @@ export class UserManagementComponent implements OnInit {
   get password() { return this.createUserForm.get('password'); }
   get firstName() { return this.createUserForm.get('firstName'); }
   get lastName() { return this.createUserForm.get('lastName'); }
+  get roles() { return this.createUserForm.get('roles'); }
 
   get isEmailInvalid(): boolean {
     return !!(this.email?.invalid && this.email?.touched);
@@ -258,11 +254,16 @@ export class UserManagementComponent implements OnInit {
     return !!(this.lastName?.invalid && this.lastName?.touched);
   }
 
+  get isRolesInvalid(): boolean {
+    return !!(this.roles?.invalid && this.roles?.touched);
+  }
+
   // Edit form validation getters
   get editEmail() { return this.editUserForm.get('email'); }
   get editPassword() { return this.editUserForm.get('password'); }
   get editFirstName() { return this.editUserForm.get('firstName'); }
   get editLastName() { return this.editUserForm.get('lastName'); }
+  get editRoles() { return this.editUserForm.get('roles'); }
 
   get isEditEmailInvalid(): boolean {
     return !!(this.editEmail?.invalid && this.editEmail?.touched);
@@ -278,6 +279,10 @@ export class UserManagementComponent implements OnInit {
 
   get isEditLastNameInvalid(): boolean {
     return !!(this.editLastName?.invalid && this.editLastName?.touched);
+  }
+
+  get isEditRolesInvalid(): boolean {
+    return !!(this.editRoles?.invalid);
   }
 
   // Password visibility toggle for edit form
